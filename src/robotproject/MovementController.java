@@ -17,34 +17,34 @@ import lejos.util.Delay;
 
 public class MovementController {
 	
-	private NXTRegulatedMotor m1 = new NXTRegulatedMotor(Config.MOTOR1PORT);
-	private NXTRegulatedMotor m2 = new NXTRegulatedMotor(Config.MOTOR2PORT);
-	private STATE state = STATE.Stop;
+	private NXTRegulatedMotor regulatedMotorRight = new NXTRegulatedMotor(Config.MOTOR1PORT);
+	private NXTRegulatedMotor regulatedMotorLeft = new NXTRegulatedMotor(Config.MOTOR2PORT);
+	private STATE robotMovementState = STATE.Stop;
 	private LineController lineController;
 	private EvadeController evadeContoller;
-	private int cV,lV,dv = 0; /// sensor values
+	private int colorSensorValue,lightSensorValue, distanceSensorValue = 0; /// sensor values
 	
 	/**
 	   * MovementController: The constructor of class MovementController
 
-	   * @param lc the instance of LineController
-	   * @param ec the instance of EvadeController
+	   * @param lineController the instance of LineController
+	   * @param evadeController the instance of EvadeController
 	   */
 
-	public MovementController(LineController lc, EvadeController ec) {
-		this.lineController = lc;
-		this.evadeContoller = ec;
+	public MovementController(LineController lineController, EvadeController evadeController) {
+		this.lineController = lineController;
+		this.evadeContoller = evadeController;
 	}
 	
 	/**
 	   * Folow: Sets values of cV and lV
-	   * @param cV value of the colorSensor
-	   * @param lV value of the lightSensor
+	   * @param colorSensorValue value of the colorSensor
+	   * @param lightSensorValue value of the lightSensor
 	   */
 
-	public void Follow(int cV, int lV) {
-		this.cV = cV;
-		this.lV = lV;
+	public void Follow(int colorSensorValue, int lightSensorValue) {
+		this.colorSensorValue = colorSensorValue;
+		this.lightSensorValue = lightSensorValue;
 	}
 	
 	/**
@@ -53,7 +53,7 @@ public class MovementController {
 	   */
 
 	public void Evade(int d) {
-		this.dv = d;
+		this.distanceSensorValue = d;
 	}
 	
 	/**
@@ -63,107 +63,128 @@ public class MovementController {
 	public void Update() {
 		while(Button.ESCAPE.isUp()) {
 			
-			if(Button.LEFT.isDown()) {
-				state = STATE.Calibrate;
-			}
-			if(Button.RIGHT.isDown()) {
-				boolean test = true;
-				while(test) {
-					evadeContoller.update(this);
-					m1.setSpeed(300); m2.setSpeed(300);
-					m1.forward(); m2.forward();
-					if(dv < Config.MINDISTANCE) {
-						test = false;
-						Sound.setVolume(100);
-						Sound.beep();
-					}
-				}
-				state = STATE.Evade;
-			}
-			
-			if(state == STATE.Calibrate){
+			checkControllerState();
+			checkRobotState();
+		}
+	}
 
-				m1.resetTachoCount();
-				m1.setSpeed(150);
-				m2.setSpeed(150);
-				
-				m1.forward();
-				m2.backward();
-				
-				while (m1.getTachoCount() < 600) {
-					lineController.Calibration(false);
-				}
-				lineController.Calibration(true);
-				state = STATE.Stop;
-			}
-			
-			if(state == STATE.Search){
-				lineController.Update(this);
-				m1.setSpeed(200); m2.setSpeed(200);
-				m1.forward(); m2.forward();
-				System.out.println("search " +lV  + " " + cV);
-				if(lV < 50 || cV < 50) { 
-					state = STATE.Follow;
-				}
-				
-			}
-			
-			if(state == STATE.Follow) {
-				lineController.Update(this);
-				evadeContoller.update(this);
-				
-				if(dv < Config.MINDISTANCE) {
-					state = STATE.Evade;
-				}
-				
-				//m1.setSpeed(300); m2.setSpeed(300);
-				m1.forward(); m2.forward();
-				
-				System.out.println("follow " + lV  + " " + cV);
-
-					float speed = 5 * lV /2 ;
-					m2.setSpeed(speed);
-
-					float speed2 = 5 * cV / 2 ;
-					m1.setSpeed(speed2);
+	private void checkRobotState() {
+		if(robotMovementState == STATE.Calibrate){
+			turnTangoCount();
+		}
 		
-			}
+		if(robotMovementState == STATE.Search){
+			changeSpeedsToSearhObject();
+		}
+		
+		if(robotMovementState == STATE.Follow) {
+			lineController.Update(this);
+			evadeContoller.update(this);
 			
-			if(state == STATE.Evade) {
-				m1.resetTachoCount();
-				m1.setSpeed(300); m2.setSpeed(300);
-				m1.backward(); m2.forward();
-				int tmptaco = 0;
-				
-				while(dv < Config.MINDISTANCE) {
-					evadeContoller.update(this);
-					//distanceTurned++;
-				}
-				Delay.msDelay(50);
-				m1.resetTachoCount();
-				m1.forward();
-				
-				while(m1.getTachoCount() < 700) {}
-				
-				m2.backward();
-				
-				while(dv > Config.MINDISTANCE) {
-					evadeContoller.update(this);
-				}
-				
-				m2.forward();
-				m1.backward();
-				Delay.msDelay(400);
-				m1.forward();
-				Delay.msDelay(500);
-				state = STATE.Stop;
-				
+			if(distanceSensorValue < Config.MINDISTANCE) {
+				robotMovementState = STATE.Evade;
 			}
-			
-			if(state == STATE.Stop) {
-				m1.stop();
-				m2.stop();
+			followLine();
+		}
+		
+		if(robotMovementState == STATE.Evade) {
+			startEvadion();
+		}
+		
+		if(robotMovementState == STATE.Stop) {
+			regulatedMotorRight.stop();
+			regulatedMotorLeft.stop();
+		}
+	}
+
+	private void checkControllerState() {
+		if(Button.LEFT.isDown()) {
+			robotMovementState = STATE.Calibrate;
+		}
+		if(Button.RIGHT.isDown()) {
+			testDistanceToObject();
+		}
+	}
+
+	private void changeSpeedsToSearhObject() {
+		lineController.Update(this);
+		regulatedMotorRight.setSpeed(200); regulatedMotorLeft.setSpeed(200);
+		regulatedMotorRight.forward(); regulatedMotorLeft.forward();
+		System.out.println("search " +lightSensorValue  + " " + colorSensorValue);
+		if(lightSensorValue < 50 || colorSensorValue < 50) { 
+			robotMovementState = STATE.Follow;
+		}
+	}
+
+	private void startEvadion() {
+		regulatedMotorRight.resetTachoCount();
+		regulatedMotorRight.setSpeed(300); regulatedMotorLeft.setSpeed(300);
+		regulatedMotorRight.backward(); regulatedMotorLeft.forward();
+		int tmptaco = 0;
+		
+		while(distanceSensorValue < Config.MINDISTANCE) {
+			evadeContoller.update(this);
+		}
+		Delay.msDelay(50);
+		regulatedMotorRight.resetTachoCount();
+		regulatedMotorRight.forward();
+		
+		while(regulatedMotorRight.getTachoCount() < 700) {}
+		
+		regulatedMotorLeft.backward();
+		
+		while(distanceSensorValue > Config.MINDISTANCE) {
+			evadeContoller.update(this);
+		}
+		
+		regulatedMotorLeft.forward();
+		regulatedMotorRight.backward();
+		Delay.msDelay(400);
+		regulatedMotorRight.forward();
+		Delay.msDelay(500);
+		robotMovementState = STATE.Stop;
+	}
+
+	private void followLine() {
+		//m1.setSpeed(300); m2.setSpeed(300);
+		regulatedMotorRight.forward(); regulatedMotorLeft.forward();
+		
+		System.out.println("follow " + lightSensorValue  + " " + colorSensorValue);
+
+			float speed = 5 * lightSensorValue /2 ;
+			regulatedMotorLeft.setSpeed(speed);
+
+			float speed2 = 5 * colorSensorValue / 2 ;
+			regulatedMotorRight.setSpeed(speed2);
+	}
+
+	private void turnTangoCount() {
+		regulatedMotorRight.resetTachoCount();
+		regulatedMotorRight.setSpeed(150);
+		regulatedMotorLeft.setSpeed(150);
+		
+		regulatedMotorRight.forward();
+		regulatedMotorLeft.backward();
+		
+		while (regulatedMotorRight.getTachoCount() < 600) {
+			lineController.Calibration(false);
+		}
+		lineController.Calibration(true);
+		robotMovementState = STATE.Stop;
+	}
+
+	private void testDistanceToObject() {
+		boolean testDistance = true;
+		while(testDistance) {
+			evadeContoller.update(this);
+			regulatedMotorRight.setSpeed(300); regulatedMotorLeft.setSpeed(300);
+			regulatedMotorRight.forward(); regulatedMotorLeft.forward();
+			if(distanceSensorValue < Config.MINDISTANCE) {
+				testDistance = false;
+				Sound.setVolume(100);
+				Sound.beep();
 			}
 		}
+		robotMovementState = STATE.Evade;
 	}
 }
