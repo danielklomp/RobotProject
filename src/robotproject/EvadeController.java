@@ -19,13 +19,13 @@ public class EvadeController implements SensorListener{
 	}
 
 	/**
-	   * Update: Updates the controllers
+	   * UpdateControllerAndRobotState: Updates the controllers
 
 	   * @param mc the MoveMentcontrollerobject
 	   */
 
 	public void update(MovementController mc) {
-		mc.Evade(distance);
+		mc.setDistanceSensorValue(distance);
 	}
 
 	

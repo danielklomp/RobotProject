@@ -82,13 +82,13 @@ public class LineController implements SensorListener {
 	}
 	
 	/**
-	   * Function Update: Update function of class LineController, sets the values of sensor to Movementcontrollers follow function
+	   * Function UpdateControllerAndRobotState: UpdateControllerAndRobotState function of class LineController, sets the values of sensor to Movementcontrollers follow function
 
 	   * @param mc the instance of MovementController
 	   */
 
 	public void Update(MovementController mc){
-		mc.Follow(cV, lV);
+		mc.FollowLine(cV, lV);
 		//System.out.println("update " + cV + " " + lV);
 	}
 

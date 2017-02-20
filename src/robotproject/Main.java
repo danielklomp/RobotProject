@@ -33,6 +33,6 @@ public class Main {
 		LineController lineController =  new LineController(ligthSenor,colorSensor);
 		EvadeController evadeController = new EvadeController(ultrasonicSensor);
 		MovementController movementController = new MovementController(lineController, evadeController);
-		movementController.Update();
+		movementController.UpdateControllerAndRobotState();
 	}
 }

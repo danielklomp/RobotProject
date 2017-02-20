@@ -16,7 +16,8 @@ import lejos.util.Delay;
 
 
 public class MovementController {
-	
+	// Refactor: Changed names to enhance readability
+	//
 	private NXTRegulatedMotor regulatedMotorRight = new NXTRegulatedMotor(Config.MOTOR1PORT);
 	private NXTRegulatedMotor regulatedMotorLeft = new NXTRegulatedMotor(Config.MOTOR2PORT);
 	private STATE robotMovementState = STATE.Stop;
@@ -42,32 +43,33 @@ public class MovementController {
 	   * @param lightSensorValue value of the lightSensor
 	   */
 
-	public void Follow(int colorSensorValue, int lightSensorValue) {
+	public void FollowLine(int colorSensorValue, int lightSensorValue) {
 		this.colorSensorValue = colorSensorValue;
 		this.lightSensorValue = lightSensorValue;
 	}
 	
 	/**
-	   * Evade: Sets value of dv (Distance value) of detected object
+	   * setDistanceSensorValue: Sets value of dv (Distance value) of detected object
 	   * @param d the distance of the detected object
 	   */
 
-	public void Evade(int d) {
-		this.distanceSensorValue = d;
+	public void setDistanceSensorValue(int value) {
+		this.distanceSensorValue = value;
 	}
 	
 	/**
-	   * Update: Update function of MovementController class
+	   * UpdateControllerAndRobotState: UpdateControllerAndRobotState function of MovementController class
 	   */
-
-	public void Update() {
+	//Refactor: Does 2 things now in stead of 12, but still too much
+	public void UpdateControllerAndRobotState() {
 		while(Button.ESCAPE.isUp()) {
-			
-			checkControllerState();
+
+			updateControllerState();
 			checkRobotState();
 		}
 	}
 
+	// Refactor : This function does too many things! It should be split into multiple methods
 	private void checkRobotState() {
 		if(robotMovementState == STATE.Calibrate){
 			turnTangoCount();
@@ -97,7 +99,7 @@ public class MovementController {
 		}
 	}
 
-	private void checkControllerState() {
+	private void updateControllerState() {
 		if(Button.LEFT.isDown()) {
 			robotMovementState = STATE.Calibrate;
 		}
